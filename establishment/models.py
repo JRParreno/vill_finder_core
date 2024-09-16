@@ -13,7 +13,7 @@ class BusinessCategory(BaseModel):
         managed = True
         verbose_name = "Business Category"
         verbose_name_plural = "Business Categories"
-        ordering = ['-name',]
+        ordering = ['name',]
         
     def __str__(self):
         return self.name
@@ -27,7 +27,7 @@ class BusinessSubCategory(BaseModel):
         managed = True
         verbose_name = "Business Sub Category"
         verbose_name_plural = "Business Sub Categories"
-        ordering = ['-name',]
+        ordering = ['name',]
         
     def __str__(self):
         return f'{self.name} - {self.categories.name}'

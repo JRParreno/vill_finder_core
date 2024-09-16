@@ -3,6 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import BusinessCategory, Business
 from .serializers import BusinessCategorySerializer, BusinessSerializer
 from .filters import BusinessFilter
+from core.paginate import ExtraSmallResultsSetPagination
 
 class BusinessCategoryListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
@@ -10,6 +11,7 @@ class BusinessCategoryListView(generics.ListAPIView):
     serializer_class = BusinessCategorySerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['category__name']
+    pagination_class = ExtraSmallResultsSetPagination
 
 
 class BusinessListView(generics.ListAPIView):
@@ -18,3 +20,4 @@ class BusinessListView(generics.ListAPIView):
     serializer_class = BusinessSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = BusinessFilter
+    pagination_class = ExtraSmallResultsSetPagination
