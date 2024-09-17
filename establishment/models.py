@@ -8,7 +8,6 @@ from django.core.exceptions import ValidationError
 class BusinessCategory(BaseModel):
     name = models.CharField(max_length=150)
 
-
     class Meta:
         managed = True
         verbose_name = "Business Category"
@@ -43,6 +42,8 @@ class Business(BaseModel, GeoItem):
     open_time = models.TimeField()
     close_time = models.TimeField()
     category = models.ManyToManyField(BusinessSubCategory)
+    map_icon = models.ImageField(
+        upload_to='images/map/icon/', blank=True, null=True)
     
     @property
     def geomap_longitude(self):
