@@ -37,16 +37,20 @@ class BusinessSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_map_icon_bitmap(self, obj):
-        if obj.map_icon:
-            # Open the image file
-            image = Image.open(obj.map_icon.path)
+        if obj.map_icon and obj.map_icon.path:
+            try:
+                # Open the image file
+                image = Image.open(obj.map_icon.path)
 
-            # Convert the image to a byte stream (bitmap)
-            byte_arr = io.BytesIO()
-            image.save(byte_arr, format='PNG')  # Saving as BMP format
-            byte_arr = byte_arr.getvalue()
+                # Convert the image to a byte stream (PNG format for transparency)
+                byte_arr = io.BytesIO()
+                image.save(byte_arr, format='PNG')  # Save as PNG instead of BMP
+                byte_arr = byte_arr.getvalue()
 
-            # Encode the byte array to base64 to send as JSON
-            bitmap = base64.b64encode(byte_arr).decode('utf-8')
-            return bitmap
+                # Encode the byte array to base64 to send as JSON
+                bitmap = base64.b64encode(byte_arr).decode('utf-8')
+                return bitmap
+            except (FileNotFoundError, OSError) as e:
+                # Handle cases where the image file is not found or cannot be opened
+                return None
         return None
