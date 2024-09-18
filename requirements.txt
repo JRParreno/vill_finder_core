@@ -9,6 +9,7 @@ coreapi==2.3.3
 coreschema==0.0.4
 cryptography==43.0.1
 defusedxml==0.8.0rc2
+dj-database-url==2.2.0
 Django==4.2.15
 django-admin-geomap==1.6
 django-cors-headers==4.4.0
@@ -33,6 +34,7 @@ google-resumable-media==2.7.2
 googleapis-common-protos==1.65.0
 grpcio==1.66.1
 grpcio-status==1.66.1
+gunicorn==23.0.0
 httplib2==0.22.0
 idna==3.9
 inflection==0.5.1
@@ -47,6 +49,7 @@ packaging==24.1
 pillow==10.4.0
 proto-plus==1.24.0
 protobuf==5.28.1
+psycopg2-binary==2.9.9
 pyasn1==0.6.1
 pyasn1-modules==0.4.1
 pycparser==2.22
