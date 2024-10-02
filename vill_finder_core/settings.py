@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     
     'establishment',
     'user_profile',
+    'places',
     'api',
 ]
 
