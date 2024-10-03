@@ -3,7 +3,8 @@ from django.core.exceptions import ValidationError
 from core.base_models import BaseModel
 from django_admin_geomap import GeoItem
 from user_profile.models import UserProfile
-
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 class Category(BaseModel):
@@ -77,8 +78,6 @@ class Building(BaseModel, GeoItem):
             raise ValidationError('Latitude must be between -90 and 90.')
         
 class Rental(Building):
-    num_bedrooms = models.IntegerField()
-    num_bathrooms = models.IntegerField()
     kitchen = models.BooleanField(default=False)
     air_conditioning = models.BooleanField(default=False)
     wifi = models.BooleanField(default=False)
@@ -86,6 +85,8 @@ class Rental(Building):
     refrigerator = models.BooleanField(default=False)
     emergency_exit = models.BooleanField(default=False)
     contact_number = models.CharField(max_length=25, null=True, blank=True)
+    num_bedrooms = models.PositiveIntegerField(default=0)  # Only positive integers
+    num_bathrooms = models.PositiveIntegerField(default=0)  # Only positive integers
 
     # New fields
     PROPERTY_CONDITION_CHOICES = [
@@ -114,21 +115,57 @@ class Rental(Building):
     property_condition = models.CharField(max_length=10, choices=PROPERTY_CONDITION_CHOICES, default='GOOD')
     furniture_condition = models.CharField(max_length=10, choices=FURNITURE_CONDITION_CHOICES, default='GOOD')
     lease_term = models.CharField(max_length=20, choices=LEASE_TERM_CHOICES, default='LONG_TERM')
+    monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
 
-    monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
+    def clean(self):
+        super().clean()
+        
+        # Validate num_bedrooms
+        if self.num_bedrooms < 0:
+            raise ValidationError("Number of bedrooms cannot be negative.")
+        
+        # Validate num_bathrooms
+        if self.num_bathrooms < 0:
+            raise ValidationError("Number of bathrooms cannot be negative.")
+        
+        # Validate monthly_rent
+        if self.monthly_rent is None:
+            raise ValidationError("Monthly rent cannot be blank.")
+        if self.monthly_rent <= 0:
+            raise ValidationError("Monthly rent must be greater than zero.")
+
+    def save(self, *args, **kwargs):
+        # Call clean before saving to trigger validation
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} - Accommodation"
-
+        return self.name
+    
 
 class FoodEstablishment(Building):
     opening_time = models.TimeField()
     closing_time = models.TimeField()
 
     def __str__(self):
-        return f"{self.name} - {self.cuisine_type}"
+        return self.name
 
 
 class BuildingPhoto(BaseModel):
     building = models.ForeignKey(Building, related_name='photos', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='building_photos/')
+
+
+class Review(BaseModel):
+    STARS_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    # Use a generic ForeignKey if using Django's contenttypes
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    stars = models.IntegerField(choices=STARS_CHOICES)
+    comment = models.TextField()
+
+    def __str__(self):
+        return f'Review for {self.content_object} - {self.stars} stars'
