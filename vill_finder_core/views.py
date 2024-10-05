@@ -1,13 +1,3 @@
-from firebase_admin import auth
-from django.conf import settings
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from rest_framework.views import APIView
-from django.contrib.auth.models import User
-from user_profile.models import UserProfile
-from django.views.decorators.csrf import csrf_exempt
-
-
 import json
 from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
@@ -18,7 +8,26 @@ from oauth2_provider.views.base import TokenView
 from django.core.exceptions import ObjectDoesNotExist
 from oauthlib.common import generate_token
 from datetime import timedelta
+from firebase_admin import auth
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from rest_framework.views import APIView
+from django.contrib.auth.models import User
+from user_profile.models import UserProfile
+from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+import time
+
+# Your custom token verification function
+def verify_firebase_token(id_token):
+    try:
+        # Directly verify the Firebase ID token
+        decoded_token = auth.verify_id_token(id_token)
+        return decoded_token  # Token is valid
+    except auth.InvalidIdTokenError:
+        raise ValueError("Invalid token")
+    except auth.ExpiredIdTokenError:
+        raise ValueError("Token expired")
 
 
 class VerifyTokenView(APIView):
@@ -35,8 +44,9 @@ class VerifyTokenView(APIView):
             return Response({"error": "Missing client_id"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verify the Firebase ID token
+            # Use the custom token verification function with leeway
             decoded_token = auth.verify_id_token(id_token)
+            
             uid = decoded_token['uid']
             email = decoded_token.get('email', None)
             full_name = decoded_token.get('name', None)
@@ -46,6 +56,7 @@ class VerifyTokenView(APIView):
             name_parts = full_name.split(' ', 1)  # Split into two parts
             firstname = name_parts[0] if len(name_parts) > 0 else ''
             lastname = name_parts[1] if len(name_parts) > 1 else ''
+            
             # Find or create the user based on UID
             user, created = User.objects.get_or_create(
                 username=uid, defaults={'email': email, 'first_name': firstname, 'last_name': lastname}
@@ -107,6 +118,7 @@ class VerifyTokenView(APIView):
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 

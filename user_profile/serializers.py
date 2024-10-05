@@ -1,9 +1,6 @@
-from django import utils
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import UserProfile
-from django.core.files.base import ContentFile
-import base64
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -17,7 +14,6 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'get_full_name'
         )
-
         extra_kwargs = {
             'username': {
                 'read_only': True
@@ -25,22 +21,19 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
 
-
-class ProfileSerializer(serializers.Serializer):
+class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
 
     class Meta:
         model = UserProfile
-        fields = ('__all__',)
+        fields = ['id', 'user', 'birthdate', 'contact_number', 'profile_photo']
 
-
-    def __init__(self, *args, **kwargs):
-        context = kwargs.get('context', {})
-        self.request = context.get('request', None)
-        super(ProfileSerializer, self).__init__(*args, **kwargs)
-
-    def get_profile_photo(self, data):
+    def to_representation(self, instance):
+        # Get the default representation
+        representation = super().to_representation(instance)
         request = self.context.get('request')
-        photo_url = data.profile_photo.url
-        return request.build_absolute_uri(photo_url)
-
+        # If profile_photo exists, build the absolute URI
+        if instance.profile_photo:
+            photo_url = request.build_absolute_uri(instance.profile_photo.url)
+            representation['profile_photo'] = photo_url
+        return representation

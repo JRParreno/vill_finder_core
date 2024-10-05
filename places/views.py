@@ -7,26 +7,27 @@ from core.paginate import ExtraSmallResultsSetPagination
 from .models import Category, Rental, FoodEstablishment, Review
 from .serializers import RentalSerializer, FoodEstablishmentSerializer, CategorySerializer, ReviewSerializer
 import math
-
+from .utils import DistanceMixin
 
 class CategoryListView(ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     serializer_class = CategorySerializer
 
     def get_queryset(self):
-        return Category.objects.filter(parent__isnull=True)
+        queryset = Category.objects.filter(parent__isnull=True).prefetch_related('subcategories')
+        
+        # Get the 'q' query parameter from the request
+        query = self.request.GET.get('q', None)
+        
+        # If a query parameter is provided, filter the queryset
+        if query:
+            queryset = queryset.filter(name__icontains=query)  # Use icontains for case-insensitive search
 
-class PlaceSearchView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+        return queryset
+
+class PlaceSearchView(APIView, DistanceMixin):
+    permission_classes = [permissions.AllowAny]
     pagination_class = ExtraSmallResultsSetPagination
-    
-    def haversine(self, lon1, lat1, lon2, lat2):
-        R = 6371  # Radius of the Earth in km
-        dlon = lon2 - lon1
-        dlat = lat2 - lat1
-        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
-        c = 2 * math.asin(math.sqrt(a))
-        return R * c  # Distance in km
 
     def get_parent_categories(self, category_id):
         """ Recursively get parent categories. """
@@ -89,28 +90,30 @@ class PlaceSearchView(APIView):
         else:
             food_within_radius = food_establishment_results
 
-        # Combine both querysets
-        combined_results = list(rental_within_radius) + list(food_within_radius)
+        # Serialize the results for rentals and foods separately
+        serialized_rentals = RentalSerializer(rental_within_radius, many=True).data
+        serialized_foods = FoodEstablishmentSerializer(food_within_radius, many=True).data
 
-        # Serialize the results based on their type
-        serialized_results = []
-        for result in combined_results:
-            if isinstance(result, Rental):
-                serializer = RentalSerializer(result)
-            elif isinstance(result, FoodEstablishment):
-                serializer = FoodEstablishmentSerializer(result)
-            serialized_results.append(serializer.data)
-
-        # Paginate the combined results
+        # Paginate rentals and foods separately
         paginator = self.pagination_class()
-        paginated_results = paginator.paginate_queryset(serialized_results, request)
-        return paginator.get_paginated_response(paginated_results)
-    
+        paginated_rentals = paginator.paginate_queryset(serialized_rentals, request)
+        paginated_foods = paginator.paginate_queryset(serialized_foods, request)
 
-class BaseSearchView(ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+        # Combine the results into a structured response
+        results = {
+            'rentals': paginated_rentals,
+            'foods': paginated_foods
+        }
+
+        return paginator.get_paginated_response(results)
+
+class BaseSearchView(ListAPIView, DistanceMixin):
+    permission_classes = [permissions.AllowAny]
     query_param = 'q'
     category_param = 'category_id'
+    latitude_param = 'latitude'
+    longitude_param = 'longitude'
+    radius_param = 'radius'
 
     def get_parent_categories(self, category_id):
         """ Recursively get parent categories. """
@@ -124,6 +127,9 @@ class BaseSearchView(ListAPIView):
     def filter_queryset(self, queryset):
         query = self.request.GET.get(self.query_param, '')
         category_id = self.request.GET.get(self.category_param)
+        latitude = self.request.GET.get(self.latitude_param)
+        longitude = self.request.GET.get(self.longitude_param)
+        radius = self.request.GET.get(self.radius_param, 10)  # Default radius to 10 km
 
         # Apply search filtering
         if query:
@@ -139,6 +145,21 @@ class BaseSearchView(ListAPIView):
             except self.get_category_model().DoesNotExist:
                 return response.Response({'error': 'Invalid category ID'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Filter by distance if latitude and longitude are provided
+        if latitude and longitude:
+            try:
+                latitude = float(latitude)
+                longitude = float(longitude)
+                radius = float(radius)
+
+                # Filter queryset by calculating the distance between user location and object location
+                queryset = [
+                    obj for obj in queryset
+                    if self.haversine(longitude, latitude, obj.longitude, obj.latitude) <= radius
+                ]
+            except ValueError:
+                return response.Response({'error': 'Invalid coordinates'}, status=status.HTTP_400_BAD_REQUEST)
+
         return queryset
 
     def get_queryset(self):
@@ -149,6 +170,7 @@ class BaseSearchView(ListAPIView):
 
     def get_serializer_class(self):
         raise NotImplementedError("You should implement get_serializer_class in the subclass.")
+
 
 # Define specific views for Rental and FoodEstablishment
 class RentalSearchView(BaseSearchView):

@@ -26,27 +26,26 @@ class Category(BaseModel):
 class Building(BaseModel, GeoItem):
     user_profile = models.ForeignKey(
         UserProfile, related_name='user_building', on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)  # Ensure building names are unique
     description = models.TextField(blank=True, null=True)
     address = models.CharField(max_length=255)
     longitude = models.FloatField()
     latitude = models.FloatField()
     is_food_establishment = models.BooleanField(default=False)
     categories = models.ManyToManyField(Category, related_name="buildings")
-    map_icon = models.ImageField(
-        upload_to='images/map/icon/', blank=True, null=True)
+    map_icon = models.ImageField(upload_to='images/map/icon/', blank=True, null=True)
 
     @property
     def geomap_longitude(self):
-        return '' if self.longitude is None else str(self.longitude)
+        return str(self.longitude)
 
     @property
     def geomap_latitude(self):
-        return '' if self.latitude is None else str(self.latitude)
+        return str(self.latitude)
 
     @property
     def geomap_popup_view(self):
-        return "<strong>{}</strong>".format(str(self))
+        return f"<strong>{self}</strong>"
 
     @property
     def geomap_popup_edit(self):
@@ -58,25 +57,17 @@ class Building(BaseModel, GeoItem):
     
     @property
     def geomap_icon(self):
-        return self.default_icon
-    
+        return self.map_icon.url if self.map_icon else ''
+
     class Meta:
         managed = True
         ordering = ['-updated_at',]
     
     def __str__(self):
-        return f'{self.name}- {self.address}'
+        return f'{self.name} - {self.address}'
 
 
-    def __str__(self):
-        return self.name
 
-    def clean(self):
-        if not (-180 <= self.longitude <= 180):
-            raise ValidationError('Longitude must be between -180 and 180.')
-        if not (-90 <= self.latitude <= 90):
-            raise ValidationError('Latitude must be between -90 and 90.')
-        
 class Rental(Building):
     kitchen = models.BooleanField(default=False)
     air_conditioning = models.BooleanField(default=False)
@@ -115,7 +106,7 @@ class Rental(Building):
     property_condition = models.CharField(max_length=10, choices=PROPERTY_CONDITION_CHOICES, default='GOOD')
     furniture_condition = models.CharField(max_length=10, choices=FURNITURE_CONDITION_CHOICES, default='GOOD')
     lease_term = models.CharField(max_length=20, choices=LEASE_TERM_CHOICES, default='LONG_TERM')
-    monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
 
     def clean(self):
         super().clean()
@@ -129,14 +120,11 @@ class Rental(Building):
             raise ValidationError("Number of bathrooms cannot be negative.")
         
         # Validate monthly_rent
-        if self.monthly_rent is None:
-            raise ValidationError("Monthly rent cannot be blank.")
-        if self.monthly_rent <= 0:
+        if self.monthly_rent is None or self.monthly_rent <= 0:
             raise ValidationError("Monthly rent must be greater than zero.")
 
     def save(self, *args, **kwargs):
-        # Call clean before saving to trigger validation
-        self.clean()
+        self.clean()  # Ensure clean method is called before saving
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -155,11 +143,13 @@ class BuildingPhoto(BaseModel):
     building = models.ForeignKey(Building, related_name='photos', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='building_photos/')
 
+    def __str__(self):
+        return f'Photo for {self.building}'
+    
 
 class Review(BaseModel):
     STARS_CHOICES = [(i, str(i)) for i in range(1, 6)]
 
-    # Use a generic ForeignKey if using Django's contenttypes
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
