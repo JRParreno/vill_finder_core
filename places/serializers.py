@@ -35,10 +35,19 @@ class RentalSerializer(serializers.ModelSerializer):
     user_profile = ProfileSerializer(read_only=True)
     photos = BuildingPhotoSerializer(many=True, read_only=True) 
     map_icon_bitmap = serializers.SerializerMethodField()
-
+    is_favorited = serializers.SerializerMethodField()
+    
     class Meta:
         model = Rental
         fields = '__all__'
+    
+    
+    def get_is_favorited(self, obj):
+        request = self.context.get('request', None)
+        if request and request.user.is_authenticated:
+            # If user is authenticated, check if they have favorited this rental
+            return obj.favorited_by.filter(user_profile=request.user.profile).exists()
+        return False  # If user is not authenticated, always return False
     
     def get_map_icon_bitmap(self, obj):
         if obj.map_icon and obj.map_icon.path:
@@ -93,11 +102,19 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
     user_profile = ProfileSerializer(read_only=True)
     photos = BuildingPhotoSerializer(many=True, read_only=True)  # Include photos
     map_icon_bitmap = serializers.SerializerMethodField()
+    is_favorited = serializers.SerializerMethodField()
+
 
     class Meta:
         model = FoodEstablishment
         fields = '__all__'
     
+    def get_is_favorited(self, obj):
+        request = self.context.get('request', None)
+        if request and request.user.is_authenticated:
+            # If user is authenticated, check if they have favorited this food establishment
+            return obj.favorited_by.filter(user_profile=request.user.profile).exists()
+        return False  # If user is not authenticated, always return False
 
     def get_map_icon_bitmap(self, obj):
         if obj.map_icon and obj.map_icon.path:

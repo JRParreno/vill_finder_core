@@ -160,3 +160,20 @@ class Review(BaseModel):
 
     def __str__(self):
         return f'Review for {self.content_object} - {self.stars} stars'
+
+
+class RentalFavorite(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='rental_favorites')
+    rental = models.ForeignKey(Rental, on_delete=models.CASCADE, related_name='favorited_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user_profile', 'rental')  # Ensures a user can favorite a rental only once
+
+class FoodEstablishmentFavorite(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='food_favorites')
+    food_establishment = models.ForeignKey(FoodEstablishment, on_delete=models.CASCADE, related_name='favorited_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user_profile', 'food_establishment')  # Ensures a user can favorite a food establishment only once

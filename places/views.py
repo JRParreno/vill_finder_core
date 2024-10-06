@@ -1,10 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework import permissions, response, status, viewsets
 from django.db.models import Q
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 
 from core.paginate import ExtraSmallResultsSetPagination
-from .models import Category, Rental, FoodEstablishment, Review
+from .models import Category, Rental, FoodEstablishment, Review, RentalFavorite, FoodEstablishmentFavorite
 from .serializers import RentalSerializer, FoodEstablishmentSerializer, CategorySerializer, ReviewSerializer
 import math
 from .utils import DistanceMixin
@@ -197,8 +197,76 @@ class FoodEstablishmentSearchView(BaseSearchView):
     def get_serializer_class(self):
         return FoodEstablishmentSerializer
     
-    
 
+
+class BaseRetrieveUpdateView(RetrieveUpdateAPIView):
+    permission_classes = [permissions.AllowAny]
+    lookup_field = 'id'  # Assuming you're looking up by the 'id' field, adjust if necessary
+    
+    def get_queryset(self):
+        return self.queryset
+
+    def get_category_model(self):
+        raise NotImplementedError("You should implement get_category_model in the subclass.")
+
+    def get_serializer_class(self):
+        raise NotImplementedError("You should implement get_serializer_class in the subclass.")
+
+class RentalRetrieveUpdateView(BaseRetrieveUpdateView):
+    queryset = Rental.objects.all()
+
+    def get_category_model(self):
+        return Category
+
+    
+    def patch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return response.Response({"error_message": "User must be authenticated to add/remove favorites."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        rental = self.get_object()
+        user_profile = request.user.profile
+
+        # Check if 'favorite' is passed in the request data
+        favorite = request.data.get('favorite')
+        if favorite is not None:
+            if favorite:  # Add to favorites
+                RentalFavorite.objects.get_or_create(user_profile=user_profile, rental=rental)
+            else:  # Remove from favorites
+                RentalFavorite.objects.filter(user_profile=user_profile, rental=rental).delete()
+
+        return super().patch(request, *args, **kwargs)
+
+    def get_serializer_class(self):
+        return RentalSerializer  # Return the serializer class for Rental
+
+class FoodEstablishmentRetrieveUpdateView(BaseRetrieveUpdateView):
+    queryset = FoodEstablishment.objects.all()
+    serializer_class = FoodEstablishmentSerializer
+
+    def get_category_model(self):
+        return Category
+
+    
+    def patch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return response.Response({"error_message": "User must be authenticated to add/remove favorites."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        food_establishment = self.get_object()
+        user_profile = request.user.profile
+
+        # Check if 'favorite' is passed in the request data
+        favorite = request.data.get('favorite')
+        if favorite is not None:
+            if favorite:  # Add to favorites
+                FoodEstablishmentFavorite.objects.get_or_create(user_profile=user_profile, food_establishment=food_establishment)
+            else:  # Remove from favorites
+                FoodEstablishmentFavorite.objects.filter(user_profile=user_profile, food_establishment=food_establishment).delete()
+
+        return super().patch(request, *args, **kwargs)
+
+    def get_serializer_class(self):
+        return FoodEstablishmentSerializer 
+    
 class ReviewViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Review.objects.all()
