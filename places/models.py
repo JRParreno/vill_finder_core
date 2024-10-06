@@ -34,7 +34,8 @@ class Building(BaseModel, GeoItem):
     is_food_establishment = models.BooleanField(default=False)
     categories = models.ManyToManyField(Category, related_name="buildings")
     map_icon = models.ImageField(upload_to='images/map/icon/', blank=True, null=True)
-
+    is_featured = models.BooleanField(default=False)
+    
     @property
     def geomap_longitude(self):
         return str(self.longitude)

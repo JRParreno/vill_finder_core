@@ -114,6 +114,7 @@ class BaseSearchView(ListAPIView, DistanceMixin):
     latitude_param = 'latitude'
     longitude_param = 'longitude'
     radius_param = 'radius'
+    is_featured = 'is_featured'
 
     def get_parent_categories(self, category_id):
         """ Recursively get parent categories. """
@@ -129,8 +130,12 @@ class BaseSearchView(ListAPIView, DistanceMixin):
         category_id = self.request.GET.get(self.category_param)
         latitude = self.request.GET.get(self.latitude_param)
         longitude = self.request.GET.get(self.longitude_param)
-        radius = self.request.GET.get(self.radius_param, 10)  # Default radius to 10 km
-
+        radius = self.request.GET.get(self.radius_param, 10)
+        is_featured  = self.request.GET.get('is_featured', 'false').lower() == 'true'
+        
+        if is_featured:
+            queryset =  queryset.filter(is_featured=True)
+        
         # Apply search filtering
         if query:
             queryset = queryset.filter(
