@@ -132,6 +132,8 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
         return None
 
 class ReviewSerializer(serializers.ModelSerializer):
+    user_profile = ProfileSerializer(read_only=True)
+
     class Meta:
         model = Review
-        fields = ['id', 'content_type', 'object_id', 'stars', 'comment']
+        fields = ['id', 'content_type', 'object_id', 'stars', 'comment', 'user_profile']

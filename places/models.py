@@ -154,13 +154,16 @@ class Review(BaseModel):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     stars = models.IntegerField(choices=STARS_CHOICES)
     comment = models.TextField()
 
-    def __str__(self):
-        return f'Review for {self.content_object} - {self.stars} stars'
+    class Meta:
+        # This ensures a user can only review a particular content (Rental/Food) once
+        unique_together = ('user_profile', 'content_type', 'object_id')
 
+    def __str__(self):
+        return f'Review for {self.content_object} by {self.user_profile} - {self.stars} stars'
 
 class RentalFavorite(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='rental_favorites')

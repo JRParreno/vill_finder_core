@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework import permissions, response, status, viewsets
 from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from django.contrib.contenttypes.models import ContentType
 
 from core.paginate import ExtraSmallResultsSetPagination
 from .models import Category, Rental, FoodEstablishment, Review, RentalFavorite, FoodEstablishmentFavorite
@@ -268,18 +269,29 @@ class FoodEstablishmentRetrieveUpdateView(BaseRetrieveUpdateView):
         return FoodEstablishmentSerializer 
     
 class ReviewViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     pagination_class = ExtraSmallResultsSetPagination
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        # Get parameters from the request
+        content_type_param = self.request.query_params.get('content_type', None)
+        object_id_param = self.request.query_params.get('object_id', None)
 
-        # Check for object_id in query parameters
-        object_id = request.query_params.get('object_id', None)
-        if object_id is not None:
-            queryset = queryset.filter(object_id=object_id)
+        queryset = super().get_queryset()
+
+        # Filter by content_type (e.g., 'rental' or 'foodestablishment')
+        if content_type_param:
+            try:
+                content_type = ContentType.objects.get(model=content_type_param)
+                queryset = queryset.filter(content_type=content_type)
+            except ContentType.DoesNotExist:
+                return queryset.none()  # Return empty queryset if content_type is invalid
+
+        # Filter by object_id
+        if object_id_param:
+            queryset = queryset.filter(object_id=object_id_param)
 
         # Get paginated results
         page = self.paginate_queryset(queryset)
