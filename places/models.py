@@ -44,22 +44,6 @@ class Building(BaseModel, GeoItem):
     def geomap_latitude(self):
         return str(self.latitude)
 
-    @property
-    def geomap_popup_view(self):
-        return f"<strong>{self}</strong>"
-
-    @property
-    def geomap_popup_edit(self):
-        return self.geomap_popup_view
-
-    @property
-    def geomap_popup_common(self):
-        return self.geomap_popup_view
-    
-    @property
-    def geomap_icon(self):
-        return self.map_icon.url if self.map_icon else ''
-
     class Meta:
         managed = True
         ordering = ['-updated_at',]

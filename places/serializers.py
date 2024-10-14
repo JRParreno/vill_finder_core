@@ -9,6 +9,13 @@ class BuildingPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = BuildingPhoto
         fields = ['id', 'image']
+    
+    
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if request and obj.image:
+            return request.build_absolute_uri(obj.image.url)  # Return full URL
+        return None  # Return None if image doesn't exist or request is not available
         
 class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -48,6 +55,17 @@ class RentalSerializer(serializers.ModelSerializer):
             # If user is authenticated, check if they have favorited this rental
             return obj.favorited_by.filter(user_profile=request.user.profile).exists()
         return False  # If user is not authenticated, always return False
+    
+    def get_photos(self, obj):
+        request = self.context.get('request')
+        photo_urls = []
+
+        for photo in obj.photos.all():  # Assuming photos is a related field
+            if request:
+                photo_url = request.build_absolute_uri(photo.image.url)  # Adjust `photo.image.url` based on your field
+                photo_urls.append(photo_url)
+
+        return photo_urls
     
     def get_map_icon_bitmap(self, obj):
         if obj.map_icon and obj.map_icon.path:

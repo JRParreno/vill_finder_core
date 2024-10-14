@@ -92,8 +92,9 @@ class PlaceSearchView(APIView, DistanceMixin):
             food_within_radius = food_establishment_results
 
         # Serialize the results for rentals and foods separately
-        serialized_rentals = RentalSerializer(rental_within_radius, many=True).data
-        serialized_foods = FoodEstablishmentSerializer(food_within_radius, many=True).data
+        serialized_rentals = RentalSerializer(rental_within_radius, many=True, context={'request': request}).data
+        serialized_foods = FoodEstablishmentSerializer(food_within_radius, many=True, context={'request': request}).data
+
 
         # Paginate rentals and foods separately
         paginator = self.pagination_class()
