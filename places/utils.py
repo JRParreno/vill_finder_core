@@ -17,4 +17,5 @@ class DistanceMixin:
         dlat = lat2 - lat1
         a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
         c = 2 * math.asin(math.sqrt(a))
-        return R * c  # Distance in km
+        value = R * c
+        return value  # Distance in km

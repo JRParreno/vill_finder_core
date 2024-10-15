@@ -43,7 +43,7 @@ class PlaceSearchView(APIView, DistanceMixin):
         query = request.GET.get('q', '')
         latitude = request.GET.get('latitude')
         longitude = request.GET.get('longitude')
-        radius = 10  # Radius in km
+        radius = 10000  # Radius in km
         category_id = request.GET.get('category_id')  # Get category ID from query params
 
         # Initialize rental and food results
