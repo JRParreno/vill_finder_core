@@ -304,19 +304,56 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return response.Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        user = request.user
+        content_type_str = request.data.get('content_type')
+        object_id = request.data.get('object_id')
+        stars = request.data.get('stars')
+        comment = request.data.get('comment')
+
+        # Ensure content_type is either rental or foodestablishment
+        if content_type_str not in ['rental', 'foodestablishment']:
+            return response.Response({'error': 'Invalid content type'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the content type model (Rental or FoodEstablishment)
+        content_type = ContentType.objects.get(model=content_type_str)
+
+        # Validate whether the user has already reviewed this object
+        if Review.objects.filter(content_type=content_type, object_id=object_id, user_profile=user.profile).exists():
+            return response.Response({'error': 'You have already reviewed this item'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create and save the review
+        review = Review.objects.create(
+            content_type=content_type,
+            object_id=object_id,
+            stars=stars,
+            comment=comment,
+            user_profile=user.profile  # Assuming user has a related user_profile
+        )
+
+        serializer = self.get_serializer(review)
         return response.Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        review = self.get_object()
-        serializer = self.get_serializer(review, data=request.data, partial=True)
+        """ Update an existing review """
+        instance = self.get_object()
+
+        # Ensure that only the user who created the review can update it
+        if instance.user_profile != request.user.profile:
+            return Response({'error': 'You are not allowed to update this review.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Handle partial updates or full updates
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        self.perform_update(serializer)
+
         return response.Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         review = self.get_object()
         review.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_update(self, serializer):
+        """ Save the updated review """
+        serializer.save()

@@ -17,7 +17,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class RentalAdmin(ModelAdmin):
     list_display = ('name', 'user_profile', 'address', 'num_bedrooms', 'num_bathrooms',)
     search_fields = ('name', 'address', 'user_profile__username')
-    list_filter = ('user_profile',)
+    list_filter = ('is_featured',)
     inlines = [BuildingPhotoInline]  # Inline for building photos
 
     # Geomap settings

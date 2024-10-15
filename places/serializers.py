@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Rental, FoodEstablishment, Category, Review, BuildingPhoto
+from django.contrib.contenttypes.models import ContentType
 from user_profile.serializers import ProfileSerializer
 from PIL import Image
 import io
@@ -43,10 +44,24 @@ class RentalSerializer(serializers.ModelSerializer):
     photos = BuildingPhotoSerializer(many=True, read_only=True) 
     map_icon_bitmap = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
-    
+    user_has_reviewed = serializers.SerializerMethodField()
+
     class Meta:
         model = Rental
         fields = '__all__'
+    
+    
+    def get_user_has_reviewed(self, obj):
+        user = self.context['request'].user
+        if not user.is_authenticated:
+            return False
+
+        # Check if the user has already reviewed this rental
+        return Review.objects.filter(
+            content_type=ContentType.objects.get_for_model(Rental),
+            object_id=obj.id,
+            user_profile=user.profile  # Assuming user has a related user profile
+        ).exists()
     
     
     def get_is_favorited(self, obj):
@@ -121,11 +136,24 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
     photos = BuildingPhotoSerializer(many=True, read_only=True)  # Include photos
     map_icon_bitmap = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
+    user_has_reviewed = serializers.SerializerMethodField()
 
 
     class Meta:
         model = FoodEstablishment
         fields = '__all__'
+    
+    def get_user_has_reviewed(self, obj):
+        user = self.context['request'].user
+        if not user.is_authenticated:
+            return False
+
+        # Check if the user has already reviewed this rental
+        return Review.objects.filter(
+            content_type=ContentType.objects.get_for_model(FoodEstablishment),
+            object_id=obj.id,
+            user_profile=user.profile  # Assuming user has a related user profile
+        ).exists()
     
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)
