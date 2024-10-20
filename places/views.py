@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from core.paginate import ExtraSmallResultsSetPagination
 from .models import Category, Rental, FoodEstablishment, Review, RentalFavorite, FoodEstablishmentFavorite
-from .serializers import RentalSerializer, FoodEstablishmentSerializer, CategorySerializer, ReviewSerializer
+from .serializers import RentalSerializer, FoodEstablishmentSerializer, CategorySerializer, ReviewSerializer, RentalFavoriteSerializer
 import math
 from .utils import DistanceMixin
 
@@ -357,3 +357,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         """ Save the updated review """
         serializer.save()
+        
+
+class RentalFavoriteListView(ListAPIView):
+    serializer_class = RentalSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Ensure only authenticated users can access this view
+    pagination_class = ExtraSmallResultsSetPagination
+
+    def get_queryset(self):
+        # Get the current user's profile
+        user_profile = self.request.user.profile
+
+        # Retrieve Rental objects that are favorited by the user
+        return Rental.objects.filter(favorited_by__user_profile=user_profile)

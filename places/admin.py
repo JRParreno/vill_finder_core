@@ -1,8 +1,10 @@
 from django.contrib import admin
-from .models import Category, Rental, FoodEstablishment, BuildingPhoto, Review
+from .models import Category, Rental, FoodEstablishment, BuildingPhoto, Review, RentalFavorite
 from django_admin_geomap import ModelAdmin
 from django.contrib.contenttypes.models import ContentType
 
+
+admin.site.register(RentalFavorite)
 class BuildingPhotoInline(admin.TabularInline):
     model = BuildingPhoto
     extra = 1  # Number of empty forms to display

@@ -156,6 +156,10 @@ class RentalFavorite(models.Model):
 
     class Meta:
         unique_together = ('user_profile', 'rental')  # Ensures a user can favorite a rental only once
+    
+    
+    def __str__(self):
+        return f'{self.user_profile} - {self.rental}'
 
 class FoodEstablishmentFavorite(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='food_favorites')

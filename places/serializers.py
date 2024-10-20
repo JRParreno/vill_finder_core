@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Rental, FoodEstablishment, Category, Review, BuildingPhoto
+from .models import Rental, FoodEstablishment, Category, Review, BuildingPhoto, RentalFavorite
 from django.contrib.contenttypes.models import ContentType
 from user_profile.serializers import ProfileSerializer
 from PIL import Image
@@ -183,3 +183,11 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'content_type', 'object_id', 'stars', 'comment', 'user_profile']
+
+
+class RentalFavoriteSerializer(serializers.ModelSerializer):
+    rental = RentalSerializer() 
+
+    class Meta:
+        model = RentalFavorite
+        fields = ['id', 'rental']
