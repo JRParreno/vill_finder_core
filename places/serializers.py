@@ -17,7 +17,14 @@ class BuildingPhotoSerializer(serializers.ModelSerializer):
         if request and obj.image:
             return request.build_absolute_uri(obj.image.url)  # Return full URL
         return None  # Return None if image doesn't exist or request is not available
-        
+       
+class ReviewSerializer(serializers.ModelSerializer):
+    user_profile = ProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ['id', 'content_type', 'object_id', 'stars', 'comment', 'user_profile']
+         
 class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -45,6 +52,8 @@ class RentalSerializer(serializers.ModelSerializer):
     map_icon_bitmap = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     user_has_reviewed = serializers.SerializerMethodField()
+    user_review = serializers.SerializerMethodField()
+    total_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Rental
@@ -63,7 +72,28 @@ class RentalSerializer(serializers.ModelSerializer):
             user_profile=user.profile  # Assuming user has a related user profile
         ).exists()
     
+    def get_user_review(self, obj):
+        user = self.context['request'].user
+        if not user.is_authenticated:
+            return None
+
+        # Retrieve the review if it exists, else return None
+        try:
+            review = Review.objects.get(
+                content_type=ContentType.objects.get_for_model(Rental),
+                object_id=obj.id,
+                user_profile=user.profile
+            )
+            return ReviewSerializer(review).data  # Serialize the review
+        except Review.DoesNotExist:
+            return None
     
+    def get_total_review(self, obj):
+        return Review.objects.filter(
+                content_type=ContentType.objects.get_for_model(Rental),
+                object_id=obj.id,
+            ).count()
+
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)
         if request and request.user.is_authenticated:
@@ -137,6 +167,8 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
     map_icon_bitmap = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     user_has_reviewed = serializers.SerializerMethodField()
+    user_review = serializers.SerializerMethodField()
+    total_review = serializers.SerializerMethodField()
 
 
     class Meta:
@@ -155,6 +187,28 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
             user_profile=user.profile  # Assuming user has a related user profile
         ).exists()
     
+    def get_user_review(self, obj):
+        user = self.context['request'].user
+        if not user.is_authenticated:
+            return None
+
+        # Retrieve the review if it exists, else return None
+        try:
+            review = Review.objects.get(
+                content_type=ContentType.objects.get_for_model(FoodEstablishment),
+                object_id=obj.id,
+                user_profile=user.profile
+            )
+            return ReviewSerializer(review).data  # Serialize the review
+        except Review.DoesNotExist:
+            return None
+    
+    def get_total_review(self, obj):
+        return Review.objects.filter(
+                content_type=ContentType.objects.get_for_model(Rental),
+                object_id=obj.id,
+            ).count()
+        
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)
         if request and request.user.is_authenticated:
@@ -177,12 +231,7 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
                 return None
         return None
 
-class ReviewSerializer(serializers.ModelSerializer):
-    user_profile = ProfileSerializer(read_only=True)
 
-    class Meta:
-        model = Review
-        fields = ['id', 'content_type', 'object_id', 'stars', 'comment', 'user_profile']
 
 
 class RentalFavoriteSerializer(serializers.ModelSerializer):
