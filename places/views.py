@@ -310,28 +310,27 @@ class ReviewViewSet(viewsets.ModelViewSet):
         stars = request.data.get('stars')
         comment = request.data.get('comment')
 
-        # Ensure content_type is either rental or foodestablishment
+        # Ensure content_type is either 'rental' or 'foodestablishment'
         if content_type_str not in ['rental', 'foodestablishment']:
             return response.Response({'error': 'Invalid content type'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Get the content type model (Rental or FoodEstablishment)
         content_type = ContentType.objects.get(model=content_type_str)
 
-        # Validate whether the user has already reviewed this object
-        if Review.objects.filter(content_type=content_type, object_id=object_id, user_profile=user.profile).exists():
-            return response.Response({'error': 'You have already reviewed this item'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Create and save the review
-        review = Review.objects.create(
+        # Check if a review already exists by this user for the given object
+        review, created = Review.objects.update_or_create(
             content_type=content_type,
             object_id=object_id,
-            stars=stars,
-            comment=comment,
-            user_profile=user.profile  # Assuming user has a related user_profile
+            user_profile=user.profile,
+            defaults={'stars': stars, 'comment': comment}
         )
 
         serializer = self.get_serializer(review)
-        return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        if created:
+            return response.Response(serializer.data, status=status.HTTP_201_CREATED)  # New review created
+        else:
+            return response.Response(serializer.data, status=status.HTTP_200_OK)  # Existing review updated
 
     def update(self, request, *args, **kwargs):
         """ Update an existing review """
@@ -344,6 +343,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
         # Handle partial updates or full updates
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+        # Validate data
+        if 'stars' in request.data:
+            stars = request.data['stars']
+            if stars is not None and (stars < 1 or stars > 5):
+                return response.Response({'error': 'Stars must be between 1 and 5'}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 

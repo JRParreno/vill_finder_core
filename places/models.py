@@ -140,7 +140,7 @@ class Review(BaseModel):
     content_object = GenericForeignKey('content_type', 'object_id')
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     stars = models.IntegerField(choices=STARS_CHOICES)
-    comment = models.TextField()
+    comment = models.TextField(null=True, blank=True)
 
     class Meta:
         # This ensures a user can only review a particular content (Rental/Food) once

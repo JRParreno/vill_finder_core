@@ -24,6 +24,27 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'content_type', 'object_id', 'stars', 'comment', 'user_profile']
+    
+    def validate_stars(self, value):
+        if value is None or value < 1 or value > 5:
+            raise serializers.ValidationError("Stars must be between 1 and 5.")
+        return value
+
+    def validate_comment(self, value):
+        # Allow empty comments (value can be an empty string)
+        if value is not None and isinstance(value, str):
+            if len(value) > 500:  # Example max length
+                raise serializers.ValidationError("Comment is too long. Maximum length is 500 characters.")
+        return value  # Accept empty comments as valid
+    
+    def validate(self, data):
+        stars = data.get('stars')
+        comment = data.get('comment')
+
+        if stars is None and not comment:
+            raise serializers.ValidationError("At least stars or a comment must be provided.")
+        
+        return data
          
 class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:

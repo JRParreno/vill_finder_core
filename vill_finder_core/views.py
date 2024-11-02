@@ -1,5 +1,6 @@
 import json
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from oauth2_provider.models import get_access_token_model, AccessToken, RefreshToken, get_application_model
@@ -17,6 +18,9 @@ from user_profile.models import UserProfile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import time
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from places.models import FoodEstablishment, Rental, BuildingPhoto
 
 # Your custom token verification function
 def verify_firebase_token(id_token):
@@ -170,3 +174,63 @@ class TokenViewWithUserId(TokenView):
         for k, v in headers.items():
             response[k] = v
         return response
+    
+
+
+def registerShop(request):
+    data = None
+    if request.method == 'POST':
+        first_name = request.POST['firstName']
+        last_name = request.POST['lastName']
+        address = request.POST['address']
+        contact_number = request.POST['contactNumber']
+        email = request.POST['emailAddress']
+        password = request.POST['password']
+
+        if User.objects.filter(username=email).exists():
+            data = {
+                "error_message": "Email already exists"
+            }
+
+
+        if data is None:
+
+            user = User.objects.create(
+                username=email, email=email, first_name=first_name, last_name=last_name)
+            user.set_password(password)
+            user.is_staff = True
+            user.save()
+
+            UserProfile.objects.create(user=user,
+                                       contact_number=contact_number,
+                                       )
+
+            content_type_rental = ContentType.objects.get_for_model(Rental)
+            content_type_food = ContentType.objects.get_for_model(FoodEstablishment)
+            content_type_photos = ContentType.objects.get_for_model(
+                BuildingPhoto)
+
+            rental_permissions = Permission.objects.filter(
+                content_type=content_type_rental)
+            food_permissions = Permission.objects.filter(
+                content_type=content_type_food)
+            photos_permissions = Permission.objects.filter(
+                content_type=content_type_photos)
+
+            # To add permissions
+            for perm in rental_permissions:
+                user.user_permissions.add(perm)
+
+            for perm in food_permissions:
+                user.user_permissions.add(perm)
+            
+            for perm in photos_permissions:
+                user.user_permissions.add(perm)
+
+            return redirect('admin:index')
+
+    return render(request, 'register.html', data)
+
+
+def about_us(request):
+    return render(request, 'about_us.html')

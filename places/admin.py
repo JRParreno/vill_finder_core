@@ -33,15 +33,32 @@ class RentalAdmin(ModelAdmin):
     geomap_field_latitude = "id_latitude"
     geomap_height = "700px"
     
-    class Media:
-        js = ('js/hide_map.js',)
-    
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        # Remove is_food_establishment from the form
+        
+        # Remove 'is_food_establishment' field if it exists
         if 'is_food_establishment' in form.base_fields:
             del form.base_fields['is_food_establishment']
+        
+        # Remove 'user_profile' if the user is staff (but not superuser)
+        if request.user.is_staff and not request.user.is_superuser:
+            if 'user_profile' in form.base_fields:
+                del form.base_fields['user_profile']
+        
         return form
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Restrict queryset for staff users to only show their associated rentals
+        if not request.user.is_superuser:
+            return qs.filter(user_profile__user=request.user)
+        return qs
+
+    def save_model(self, request, obj, form, change):
+        # Automatically assign the current user's profile as user_profile if the user is staff
+        if not request.user.is_superuser and not change:
+            obj.user_profile = request.user.profile
+        super().save_model(request, obj, form, change)
 
 @admin.register(FoodEstablishment)
 class FoodEstablishmentAdmin(ModelAdmin):
@@ -65,16 +82,35 @@ class FoodEstablishmentAdmin(ModelAdmin):
         js = ('js/hide_map.js',)
 
     def save_model(self, request, obj, form, change):
-        if not change:  # This means it's a new object
-            obj.is_food_establishment = True  # Automatically set to True
+        # Automatically set `is_food_establishment` to True for new objects
+        if not change:
+            obj.is_food_establishment = True
+            # Set the user_profile to the logged-in user's profile for staff users
+            if not request.user.is_superuser:
+                obj.user_profile = request.user.profile
         super().save_model(request, obj, form, change)
-    
+
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        # Remove is_food_establishment from the form
+        
+        # Remove `is_food_establishment` from the form fields
         if 'is_food_establishment' in form.base_fields:
             del form.base_fields['is_food_establishment']
+        
+        # Remove `user_profile` if the user is staff (but not superuser)
+        if request.user.is_staff and not request.user.is_superuser:
+            if 'user_profile' in form.base_fields:
+                del form.base_fields['user_profile']
+        
         return form
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Restrict queryset for staff users to only show their associated food establishments
+        if not request.user.is_superuser:
+            return qs.filter(user_profile__user=request.user)
+        return qs
+
 
 
 class ReviewContentTypeFilter(admin.SimpleListFilter):
