@@ -123,6 +123,9 @@ class FoodEstablishment(Building):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = 'Establishment'
+        verbose_name_plural = 'Establishments'
 
 class BuildingPhoto(BaseModel):
     building = models.ForeignKey(Building, related_name='photos', on_delete=models.CASCADE)
@@ -168,3 +171,4 @@ class FoodEstablishmentFavorite(models.Model):
 
     class Meta:
         unique_together = ('user_profile', 'food_establishment')  # Ensures a user can favorite a food establishment only once
+        

@@ -30,21 +30,44 @@ class PlaceSearchView(APIView, DistanceMixin):
     permission_classes = [permissions.AllowAny]
     pagination_class = ExtraSmallResultsSetPagination
 
-    def get_parent_categories(self, category_id):
-        """ Recursively get parent categories. """
-        category = Category.objects.get(id=category_id)
-        parent_categories = [category]
+    def get_full_category_hierarchy(self, category_id):
+        """Recursively get all descendant and ancestor categories for a given category."""
+        try:
+            category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            return []  # If the category does not exist, return an empty list
+
+        related_categories = {category}  # Use a set to avoid duplicates
+
+        # Add all ancestor categories
         while category.parent:
             category = category.parent
-            parent_categories.append(category)
-        return parent_categories
+            related_categories.add(category)
+
+        # Add all descendant categories
+        def add_descendants(cat):
+            for child in cat.subcategories.all():  # Use the related_name to get subcategories
+                related_categories.add(child)
+                add_descendants(child)
+
+        add_descendants(category)
+        
+        return list(related_categories)
 
     def get(self, request, *args, **kwargs):
         query = request.GET.get('q', '')
         latitude = request.GET.get('latitude')
         longitude = request.GET.get('longitude')
         radius = 10000  # Radius in km
-        category_id = request.GET.get('category_id')  # Get category ID from query params
+
+        # Retrieve and parse the comma-separated list of category IDs
+        category_list = request.GET.get('category_list', '')
+        
+        # Split the comma-separated IDs and convert them to integers
+        try:
+            category_ids = [int(id.strip()) for id in category_list.split(',') if id.strip()]
+        except ValueError:
+            return response.Response({'error': 'Invalid category_list format. IDs must be integers.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Initialize rental and food results
         rental_results = Rental.objects.all()
@@ -59,16 +82,16 @@ class PlaceSearchView(APIView, DistanceMixin):
                 Q(name__icontains=query) | Q(description__icontains=query) | Q(address__icontains=query)
             )
 
-        # Filter by category if provided
-        if category_id:
-            try:
-                # Get the category and its parent categories
-                parent_categories = self.get_parent_categories(category_id)
-                # Filter rentals and food establishments by category
-                rental_results = rental_results.filter(categories__in=parent_categories)
-                food_establishment_results = food_establishment_results.filter(categories__in=parent_categories)
-            except Category.DoesNotExist:
-                return response.Response({'error': 'Invalid category ID'}, status=status.HTTP_400_BAD_REQUEST)
+        # Filter by category list if provided
+        if category_ids:
+            # Get the full hierarchy for each category in category_ids
+            categories_to_include = set()  # Using a set to avoid duplicates
+            for category_id in category_ids:
+                categories_to_include.update(self.get_full_category_hierarchy(category_id))
+
+            # Filter rentals and food establishments by the combined list of categories
+            rental_results = rental_results.filter(categories__in=categories_to_include)
+            food_establishment_results = food_establishment_results.filter(categories__in=categories_to_include)
 
         # Initialize lists for filtered results
         rental_within_radius = rental_results
@@ -95,7 +118,6 @@ class PlaceSearchView(APIView, DistanceMixin):
         serialized_rentals = RentalSerializer(rental_within_radius, many=True, context={'request': request}).data
         serialized_foods = FoodEstablishmentSerializer(food_within_radius, many=True, context={'request': request}).data
 
-
         # Paginate rentals and foods separately
         paginator = self.pagination_class()
         paginated_rentals = paginator.paginate_queryset(serialized_rentals, request)
@@ -108,6 +130,10 @@ class PlaceSearchView(APIView, DistanceMixin):
         }
 
         return paginator.get_paginated_response(results)
+
+
+
+
 
 class BaseSearchView(ListAPIView, DistanceMixin):
     permission_classes = [permissions.AllowAny]
