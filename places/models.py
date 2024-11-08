@@ -36,7 +36,7 @@ class Building(BaseModel, GeoItem):
     map_icon = models.ImageField(upload_to='images/map/icon/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
     contact_name = models.CharField(max_length=50, null=True, blank=False)
-    contact_number = models.CharField(max_length=25, null=True, blank=False)
+    contact_number = models.CharField(max_length=25, null=True, blank=True)
     
     @property
     def geomap_longitude(self):
