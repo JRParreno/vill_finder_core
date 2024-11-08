@@ -35,6 +35,8 @@ class Building(BaseModel, GeoItem):
     categories = models.ManyToManyField(Category, related_name="buildings")
     map_icon = models.ImageField(upload_to='images/map/icon/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
+    contact_name = models.CharField(max_length=50, null=True, blank=False)
+    contact_number = models.CharField(max_length=25, null=True, blank=False)
     
     @property
     def geomap_longitude(self):
@@ -60,10 +62,9 @@ class Rental(Building):
     pets_allowed = models.BooleanField(default=False)
     refrigerator = models.BooleanField(default=False)
     emergency_exit = models.BooleanField(default=False)
-    contact_number = models.CharField(max_length=25, null=True, blank=True)
     num_bedrooms = models.PositiveIntegerField(default=0)  # Only positive integers
     num_bathrooms = models.PositiveIntegerField(default=0)  # Only positive integers
-
+    
     # New fields
     PROPERTY_CONDITION_CHOICES = [
         ('NEW', 'New'),
