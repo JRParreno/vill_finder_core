@@ -33,6 +33,10 @@ class RentalAdmin(ModelAdmin):
     geomap_field_latitude = "id_latitude"
     geomap_height = "700px"
     
+    class Media:
+        js = ('js/hide_map.js',)
+
+    
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         
