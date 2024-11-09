@@ -226,7 +226,7 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
     
     def get_total_review(self, obj):
         return Review.objects.filter(
-                content_type=ContentType.objects.get_for_model(Rental),
+                content_type=ContentType.objects.get_for_model(FoodEstablishment),
                 object_id=obj.id,
             ).count()
         
