@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Avg
 from .models import Rental, FoodEstablishment, Category, Review, BuildingPhoto, RentalFavorite
 from django.contrib.contenttypes.models import ContentType
 from user_profile.serializers import ProfileSerializer
@@ -75,6 +76,8 @@ class RentalSerializer(serializers.ModelSerializer):
     user_has_reviewed = serializers.SerializerMethodField()
     user_review = serializers.SerializerMethodField()
     total_review = serializers.SerializerMethodField()
+    average_review = serializers.SerializerMethodField()  # Added field
+
 
     class Meta:
         model = Rental
@@ -114,6 +117,16 @@ class RentalSerializer(serializers.ModelSerializer):
                 content_type=ContentType.objects.get_for_model(Rental),
                 object_id=obj.id,
             ).count()
+    
+    def get_average_review(self, obj):
+        # Calculate the average rating of all reviews for this rental
+        average = Review.objects.filter(
+            content_type=ContentType.objects.get_for_model(Rental),
+            object_id=obj.id,
+        ).aggregate(Avg('stars'))['stars__avg'] 
+
+        # If there are no reviews, return None or 0.0 based on your preference
+        return average if average is not None else 0.0
 
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)
@@ -190,6 +203,7 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
     user_has_reviewed = serializers.SerializerMethodField()
     user_review = serializers.SerializerMethodField()
     total_review = serializers.SerializerMethodField()
+    average_review = serializers.SerializerMethodField()  # Added field
 
 
     class Meta:
@@ -229,6 +243,17 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
                 content_type=ContentType.objects.get_for_model(FoodEstablishment),
                 object_id=obj.id,
             ).count()
+    
+    def get_average_review(self, obj):
+        # Calculate the average rating of all reviews for this food establishments
+        average = Review.objects.filter(
+            content_type=ContentType.objects.get_for_model(FoodEstablishment),
+            object_id=obj.id,
+        ).aggregate(Avg('stars'))['stars__avg']
+
+        # If there are no reviews, return None or 0.0 based on your preference
+        return average if average is not None else 0.0
+
         
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)

@@ -64,6 +64,7 @@ class Rental(Building):
     emergency_exit = models.BooleanField(default=False)
     num_bedrooms = models.PositiveIntegerField(default=0)  # Only positive integers
     num_bathrooms = models.PositiveIntegerField(default=0)  # Only positive integers
+    available_bedrooms = models.PositiveIntegerField(default=0)  # Only positive integers
     
     # New fields
     PROPERTY_CONDITION_CHOICES = [
@@ -101,6 +102,14 @@ class Rental(Building):
         if self.num_bedrooms < 0:
             raise ValidationError("Number of bedrooms cannot be negative.")
         
+        # Validate num_bedrooms
+        if self.available_bedrooms < 0:
+            raise ValidationError("Number of available bedrooms cannot be negative.")
+        
+        # Validate num_bedrooms
+        if self.num_bedrooms < self.available_bedrooms:
+            raise ValidationError("Number of available bedrooms cannot be greater than number of bedrooms.")
+        
         # Validate num_bathrooms
         if self.num_bathrooms < 0:
             raise ValidationError("Number of bathrooms cannot be negative.")
@@ -118,6 +127,7 @@ class Rental(Building):
     
 
 class FoodEstablishment(Building):
+    is_open_24_hours = models.BooleanField(default=False)
     opening_time = models.TimeField()
     closing_time = models.TimeField()
 
