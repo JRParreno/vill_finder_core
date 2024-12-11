@@ -5,7 +5,8 @@ from django_admin_geomap import GeoItem
 from user_profile.models import UserProfile
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
-
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from textblob import TextBlob
 
 class Category(BaseModel):
     name = models.CharField(max_length=255)
@@ -155,13 +156,35 @@ class Review(BaseModel):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     stars = models.IntegerField(choices=STARS_CHOICES)
     comment = models.TextField(null=True, blank=True)
-
+    sentiment_label = models.CharField(max_length=20, null=True, blank=True)
+    sentiment_score = models.FloatField(null=True, blank=True)
     class Meta:
         # This ensures a user can only review a particular content (Rental/Food) once
         unique_together = ('user_profile', 'content_type', 'object_id')
 
     def __str__(self):
         return f'Review for {self.content_object} by {self.user_profile} - {self.stars} stars'
+    
+    def analyze_sentiment(self):
+        """
+        Perform sentiment analysis on the comment field and update sentiment_label and sentiment_score.
+        """
+        if self.comment:
+            # Using VADER
+            analyzer = SentimentIntensityAnalyzer()
+            sentiment = analyzer.polarity_scores(self.comment)
+            self.sentiment_score = sentiment['compound']
+            if sentiment['compound'] >= 0.05:
+                self.sentiment_label = 'Positive'
+            elif sentiment['compound'] <= -0.05:
+                self.sentiment_label = 'Negative'
+            else:
+                self.sentiment_label = 'Neutral'
+
+    def save(self, *args, **kwargs):
+        # Perform sentiment analysis before saving
+        self.analyze_sentiment()
+        super().save(*args, **kwargs)
 
 class RentalFavorite(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='rental_favorites')
