@@ -12,4 +12,4 @@ then
   python ./manage.py createsuperuser --no-input
 fi
 
-python download_nltk_resources.py
+python setup_nltk.py
