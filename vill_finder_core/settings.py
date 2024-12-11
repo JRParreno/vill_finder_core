@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import dj_database_url
+import nltk
 
 
 load_dotenv()
@@ -191,3 +192,10 @@ MEDIA_URL = '/media/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Define the NLTK data directory relative to your Django project
+nltk_data_dir = os.path.join(BASE_DIR, 'nltk_data')
+
+# Add the custom NLTK data path
+nltk.data.path.append(nltk_data_dir)
