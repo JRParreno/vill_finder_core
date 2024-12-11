@@ -2,8 +2,8 @@ import os
 import nltk
 
 def setup_nltk():
-    # Define the custom NLTK data directory
-    nltk_data_dir = "/var/media/nltk_data"
+    # Define a writable directory for NLTK data
+    nltk_data_dir = "/tmp/nltk_data"
     
     # Ensure the directory exists
     os.makedirs(nltk_data_dir, exist_ok=True)
