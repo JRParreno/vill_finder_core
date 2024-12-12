@@ -24,13 +24,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ['id', 'content_type', 'object_id', 'stars', 'comment', 'user_profile']
+        fields = "__all__"
     
-    def validate_stars(self, value):
-        if value is None or value < 1 or value > 5:
-            raise serializers.ValidationError("Stars must be between 1 and 5.")
-        return value
-
+    
     def validate_comment(self, value):
         # Allow empty comments (value can be an empty string)
         if value is not None and isinstance(value, str):
@@ -39,11 +35,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         return value  # Accept empty comments as valid
     
     def validate(self, data):
-        stars = data.get('stars')
         comment = data.get('comment')
 
-        if stars is None and not comment:
-            raise serializers.ValidationError("At least stars or a comment must be provided.")
+        if not comment:
+            raise serializers.ValidationError("Comment must be provided.")
         
         return data
          
@@ -76,7 +71,7 @@ class RentalSerializer(serializers.ModelSerializer):
     user_has_reviewed = serializers.SerializerMethodField()
     user_review = serializers.SerializerMethodField()
     total_review = serializers.SerializerMethodField()
-    average_review = serializers.SerializerMethodField()  # Added field
+    sentiment_label = serializers.SerializerMethodField()  # Added field
 
 
     class Meta:
@@ -118,15 +113,27 @@ class RentalSerializer(serializers.ModelSerializer):
                 object_id=obj.id,
             ).count()
     
-    def get_average_review(self, obj):
-        # Calculate the average rating of all reviews for this rental
-        average = Review.objects.filter(
-            content_type=ContentType.objects.get_for_model(Rental),
-            object_id=obj.id,
-        ).aggregate(Avg('stars'))['stars__avg'] 
+    def get_sentiment_label(self, obj):
+        # Filter reviews for the specific object_id
+        reviews = Review.objects.filter(object_id=obj.id)
 
-        # If there are no reviews, return None or 0.0 based on your preference
-        return average if average is not None else 0.0
+        # Check if there are reviews
+        if not reviews.exists():
+            return "No reviews found"
+
+        # Calculate the average sentiment score
+        average_sentiment_score = reviews.aggregate(avg_score=Avg('sentiment_score'))['avg_score']
+
+        # Determine the final sentiment label
+        if average_sentiment_score is not None:
+            if average_sentiment_score > 0.05:
+                return "positive"
+            elif average_sentiment_score < -0.05:
+                return "negative"
+            else:
+                return "neutral"
+
+        return "No sentiment data available"
 
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)

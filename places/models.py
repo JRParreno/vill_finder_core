@@ -148,13 +148,10 @@ class BuildingPhoto(BaseModel):
     
 
 class Review(BaseModel):
-    STARS_CHOICES = [(i, str(i)) for i in range(1, 6)]
-
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    stars = models.IntegerField(choices=STARS_CHOICES)
     comment = models.TextField(null=True, blank=True)
     sentiment_label = models.CharField(max_length=20, null=True, blank=True)
     sentiment_score = models.FloatField(null=True, blank=True)

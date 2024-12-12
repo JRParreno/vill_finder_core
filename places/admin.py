@@ -135,7 +135,7 @@ class ReviewContentTypeFilter(admin.SimpleListFilter):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('content_object_display', 'stars', 'comment', 'created_at')  # Assuming you have a `created_at` field in the model
+    list_display = ('content_object_display', 'comment', 'created_at')  # Assuming you have a `created_at` field in the model
     search_fields = ('comment',)
     list_filter = (ReviewContentTypeFilter,)
     
