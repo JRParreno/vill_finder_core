@@ -115,7 +115,7 @@ class RentalSerializer(serializers.ModelSerializer):
     
     def get_sentiment_label(self, obj):
         # Filter reviews for the specific object_id
-        reviews = Review.objects.filter(object_id=obj.id)
+        reviews = Review.objects.filter(content_type=ContentType.objects.get_for_model(Rental),object_id=obj.id)
 
         # Check if there are reviews
         if not reviews.exists():
@@ -133,7 +133,7 @@ class RentalSerializer(serializers.ModelSerializer):
             else:
                 return "neutral"
 
-        return "No sentiment data available"
+        return ""
 
     def get_is_favorited(self, obj):
         request = self.context.get('request', None)
@@ -210,7 +210,7 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
     user_has_reviewed = serializers.SerializerMethodField()
     user_review = serializers.SerializerMethodField()
     total_review = serializers.SerializerMethodField()
-    average_review = serializers.SerializerMethodField()  # Added field
+    sentiment_label = serializers.SerializerMethodField()  # Added field
 
 
     class Meta:
@@ -251,15 +251,28 @@ class FoodEstablishmentSerializer(serializers.ModelSerializer):
                 object_id=obj.id,
             ).count()
     
-    def get_average_review(self, obj):
-        # Calculate the average rating of all reviews for this food establishments
-        average = Review.objects.filter(
-            content_type=ContentType.objects.get_for_model(FoodEstablishment),
-            object_id=obj.id,
-        ).aggregate(Avg('stars'))['stars__avg']
+    def get_sentiment_label(self, obj):
+        # Filter reviews for the specific object_id
+        reviews = Review.objects.filter(content_type=ContentType.objects.get_for_model(FoodEstablishment),
+                    object_id=obj.id)
 
-        # If there are no reviews, return None or 0.0 based on your preference
-        return average if average is not None else 0.0
+        # Check if there are reviews
+        if not reviews.exists():
+            return "No reviews found"
+
+        # Calculate the average sentiment score
+        average_sentiment_score = reviews.aggregate(avg_score=Avg('sentiment_score'))['avg_score']
+
+        # Determine the final sentiment label
+        if average_sentiment_score is not None:
+            if average_sentiment_score > 0.05:
+                return "positive"
+            elif average_sentiment_score < -0.05:
+                return "negative"
+            else:
+                return "neutral"
+
+        return ""
 
         
     def get_is_favorited(self, obj):
