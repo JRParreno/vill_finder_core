@@ -333,7 +333,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
         user = request.user
         content_type_str = request.data.get('content_type')
         object_id = request.data.get('object_id')
-        stars = request.data.get('stars')
         comment = request.data.get('comment')
 
         # Ensure content_type is either 'rental' or 'foodestablishment'
@@ -348,7 +347,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
             content_type=content_type,
             object_id=object_id,
             user_profile=user.profile,
-            defaults={'stars': stars, 'comment': comment}
+            defaults={'comment': comment}
         )
 
         serializer = self.get_serializer(review)
@@ -369,12 +368,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
         # Handle partial updates or full updates
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-
-        # Validate data
-        if 'stars' in request.data:
-            stars = request.data['stars']
-            if stars is not None and (stars < 1 or stars > 5):
-                return response.Response({'error': 'Stars must be between 1 and 5'}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)

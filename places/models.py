@@ -160,7 +160,7 @@ class Review(BaseModel):
         unique_together = ('user_profile', 'content_type', 'object_id')
 
     def __str__(self):
-        return f'Review for {self.content_object} by {self.user_profile} - {self.stars} stars'
+        return f'Review for {self.content_object} by {self.user_profile}'
     
     def analyze_sentiment(self):
         """
